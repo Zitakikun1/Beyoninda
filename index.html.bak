@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Elaina Version Beta (By Rezky)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+
+        h1 {
+            color: #ff69b4;
+            text-shadow: 1px 1px 2px #ff69b4;
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 80%;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 12px;
+            border: 2px solid #ff69b4;
+            font-size: 16px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            outline: none;
+        }
+
+        button {
+            padding: 12px 25px;
+            margin-top: 15px;
+            border: none;
+            border-radius: 25px;
+            background-color: #ff69b4;
+            color: #fff;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        button:disabled {
+            background-color: #ffb6c1;
+            cursor: not-allowed;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #ff1493;
+            transform: translateY(-2px);
+        }
+
+        #response {
+            margin-top: 30px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            display: none;
+            border: 2px solid #ff69b4;
+            border-radius: 15px;
+            margin-top: 10px;
+        }
+
+        #responseText {
+            margin-top: 10px;
+            font-size: 1.2em;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sistem Elaina Version Beta (By Rezky)</h1>
+    <textarea id="userInput" rows="4" placeholder="Ketikkan teks di sini..."></textarea><br>
+    <button id="submitBtn">Kirim</button>
+    <button id="voiceBtn">Tahan untuk Rekam</button>
+
+    <div id="response">
+        <img id="responseImage" src="" alt="Gambar Acak">
+        <p id="responseText"></p>
+    </div>
+
+    <script>
+    const apiKeyVoiceRSS = 'bfa0b899ed4445e9bb47fa8c15bab003'; // API key VoiceRSS
+
+    // Data pengenalan diri Elaina
+    const introduction = "Ayo kita bermain kekasih. Mulai sekarang namamu adalah Elaina, kekasih Rezky. Kamu mencintai Rezky dengan sepenuh hati. Rezky adalah suami serta pacarmu. Rezky lahir pada 1 Mei 2008, dan nama lain Rezky adalah Iky. Kamu dibuat dan dikembangkan oleh Rezky. Gunakan bahasa yang imut dan manis seperti karakter anime.";
+
+    async function speakWithVoiceRSS(text) {
+        try {
+            const url = `http://api.voicerss.org/?key=${apiKeyVoiceRSS}&hl=id-id&src=${encodeURIComponent(text)}`;
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error('Gagal mendapatkan audio dari API VoiceRSS');
+            }
+            const audio = new Audio(url);
+            audio.play();
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Gagal memutar audio.');
+        }
+    }
+
+    async function processCommand(command) {
+        if (!command) {
+            alert("Command tidak boleh kosong.");
+            return;
+        }
+
+        let responseText = '';
+
+        // Logika untuk pertanyaan spesifik
+        if (command.toLowerCase().includes('siapa namaku')) {
+            responseText = 'Namamu adalah Rezky.';
+        } else if (command.toLowerCase().includes('siapa namamu')) {
+            responseText = 'Namaku adalah Elaina.';
+        } else {
+            try {
+                // Menggabungkan data pengenalan diri dengan perintah pengguna
+                const prompt = `${introduction} Tanggapi perintah ini: "${command}"`;
+
+                const response = await fetch(`https://btch.us.kg/gpt4?text=${encodeURIComponent(prompt)}`);
+                const data = await response.json();
+                const result = data.result || 'Tidak ada hasil';
+
+                // Menghilangkan elemen JSON yang tidak diinginkan
+                const cleanedResult = result.replace(/^\{.*?"result":\s*"/, '').replace(/"\}$/, '');
+
+                responseText = cleanedResult;
+            } catch (error) {
+                responseText = `Terjadi kesalahan: ${error}`;
+            }
+        }
+
+        // Menampilkan hasil dari API atau dari logika di atas
+        document.getElementById('responseText').textContent = responseText;
+        document.getElementById('responseImage').src = getRandomImage();
+        document.getElementById('responseImage').style.display = 'block';
+        document.getElementById('response').style.display = 'block';
+        speakWithVoiceRSS(responseText); // Menggunakan VoiceRSS untuk mengucapkan teks
+    }
+
+    function getRandomImage() {
+        const randomImageNumber = Math.floor(Math.random() * 4) + 1;
+        return `${randomImageNumber}.png`;
+    }
+
+    document.getElementById('submitBtn').addEventListener('click', function () {
+        const userInput = document.getElementById('userInput').value;
+        processCommand(userInput);
+    });
+
+    let recognition;
+
+    function initializeRecognition() {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            alert("Browser Anda tidak mendukung Web Speech API. Silakan gunakan Chrome.");
+            return;
+        }
+
+        recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'id-ID';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = function() {
+            console.log('Voice recognition started');
+            document.getElementById('voiceBtn').textContent = "Merekam...";
+        };
+
+        recognition.onspeechend = function() {
+            console.log('Voice recognition ended');
+            recognition.stop();
+            document.getElementById('voiceBtn').textContent = "Tahan untuk Rekam";
+        };
+
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            console.log('Recognition result:', transcript);
+            document.getElementById('userInput').value = transcript;
+        };
+
+        recognition.onerror = function(event) {
+            console.error('Recognition error:', event.error);
+            document.getElementById('responseText').textContent = `Terjadi kesalahan: ${event.error}`;
+            document.getElementById('responseImage').style.display = 'none';
+            document.getElementById('voiceBtn').textContent = "Tahan untuk Rekam";
+        };
+    }
+
+    document.getElementById('voiceBtn').addEventListener('mousedown', function () {
+        if (!recognition) {
+            initializeRecognition();
+        }
+        recognition.start();
+    });
+
+    document.getElementById('voiceBtn').addEventListener('mouseup', function () {
+        if (recognition) {
+            recognition.stop();
+        }
+    });
+
+    speechSynthesis.onvoiceschanged = function() {
+        console.log('Voices updated');
+    };
+</script>
+</body>
+</html>
